@@ -112,6 +112,12 @@
         const scoreEl = document.getElementById('score');
         const healthEl = document.getElementById('health');
 
+        // Game constants
+        const SPAWN_RATE_INITIAL = 2000; // milliseconds
+        const SPAWN_RATE_MIN = 500; // milliseconds
+        const DIFFICULTY_INCREASE_RATE = 10000; // decrease spawn rate every 10 seconds
+        const DIFFICULTY_DECREASE_PER_INTERVAL = 1000; // decrease spawn rate by 1 second
+
         // Canvas setup
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -131,7 +137,7 @@
         let keys = {};
         let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
         let lastSpawnTime = 0;
-        let spawnRate = 2000; // milliseconds
+        let spawnRate = SPAWN_RATE_INITIAL;
 
         // Input handling
         window.addEventListener('keydown', (e) => {
@@ -179,9 +185,10 @@
                 if (keys['d'] || keys['arrowright']) dx += 1;
 
                 // Normalize diagonal movement
+                const normFactor = Math.SQRT1_2; // 1/sqrt(2) ≈ 0.707
                 if (dx !== 0 && dy !== 0) {
-                    dx *= 0.707;
-                    dy *= 0.707;
+                    dx *= normFactor;
+                    dy *= normFactor;
                 }
 
                 this.x += dx * this.speed;
@@ -435,14 +442,17 @@
         function gameOver() {
             gameState = 'gameover';
             
+            const restartBtn = document.createElement('button');
+            restartBtn.id = 'restartBtn';
+            restartBtn.textContent = 'Restart';
+            restartBtn.addEventListener('click', startGame);
+            
             screen.innerHTML = `
                 <h1>GAME OVER</h1>
                 <p style="font-size: 36px; margin: 20px 0;">Final Score: ${score}</p>
-                <button id="restartBtn">Restart</button>
             `;
+            screen.appendChild(restartBtn);
             screen.classList.remove('hidden');
-            
-            document.getElementById('restartBtn').addEventListener('click', startGame);
         }
 
         function spawnEnemy() {
@@ -519,7 +529,10 @@
             drawGrid();
 
             // Spawn enemies
-            const currentSpawnRate = Math.max(500, spawnRate - (gameTime / 10000) * 1000);
+            const currentSpawnRate = Math.max(
+                SPAWN_RATE_MIN, 
+                SPAWN_RATE_INITIAL - (gameTime / DIFFICULTY_INCREASE_RATE) * DIFFICULTY_DECREASE_PER_INTERVAL
+            );
             if (gameTime - lastSpawnTime > currentSpawnRate) {
                 spawnEnemy();
                 lastSpawnTime = gameTime;
@@ -528,16 +541,16 @@
             // Update
             player.update(deltaTime);
             
-            for (let enemy of [...enemies]) {
-                enemy.update();
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].update();
             }
             
-            for (let projectile of [...projectiles]) {
-                projectile.update(deltaTime);
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                projectiles[i].update(deltaTime);
             }
             
-            for (let particle of [...particles]) {
-                particle.update(deltaTime);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update(deltaTime);
             }
 
             // Draw
